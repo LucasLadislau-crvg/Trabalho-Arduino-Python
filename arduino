@@ -1,0 +1,51 @@
+int SENSOR_METAL = 2;  // Entrada do sensor indutivo LJ12A3 (fio preto - saída)
+int LED = 12;          // LED indicador
+int BUZZER = 8;        // Buzzer para alarme
+
+unsigned long tempoInicio = 0;            // Guarda o momento em que a agulha foi removida
+const unsigned long tempoLimite = 30000;  // 30 segundos para ativar o alarme
+bool agulhaRemovida = false;              // Estado atual da agulha
+
+void setup() {
+  pinMode(SENSOR_METAL, INPUT);   // Entrada digital do sensor (LJ12A3 NPN com pull-up)
+  pinMode(LED, OUTPUT);
+  pinMode(BUZZER, OUTPUT);
+
+  digitalWrite(LED, LOW);         // LED desligado ao iniciar
+  digitalWrite(BUZZER, LOW);      // Buzzer desligado ao iniciar
+
+  Serial.begin(9600);             // Comunicação com o Python
+}
+
+void loop() {
+  int estado = digitalRead(SENSOR_METAL);
+
+  // Para sensor LJ12A3 NPN: LOW = metal presente / HIGH = metal ausente
+  if (estado == HIGH) {
+    // Agulha removida
+    if (!agulhaRemovida) {            // Só envia o evento uma vez
+      tempoInicio = millis();         // Marca o tempo da remoção
+      agulhaRemovida = true;
+      Serial.println("AGULHA_REMOVIDA");  // Envia para o Python
+    }
+  }
+  else {
+    // Agulha presente novamente
+    if (agulhaRemovida) {             // Só envia se realmente mudou o estado
+      agulhaRemovida = false;
+
+      digitalWrite(LED, LOW);         // Apaga LED
+      digitalWrite(BUZZER, LOW);      // Desliga buzzer
+
+      Serial.println("AGULHA_RECOLOCADA"); // Envia evento para o Python
+    }
+  }
+
+  // Se a agulha foi removida por mais de 30 segundos → aciona alarme
+  if (agulhaRemovida && (millis() - tempoInicio >= tempoLimite)) {
+    digitalWrite(LED, HIGH);
+    digitalWrite(BUZZER, HIGH);
+  }
+
+  delay(100);  // Pequena pausa para evitar ruído e leituras muito rápidas
+}
