@@ -1,0 +1,47 @@
+import serial
+from datetime import datetime
+
+# Ajuste para a porta em que o Arduino está conectado
+porta = "COM3"   
+baud = 9600
+
+ser = serial.Serial(porta, baud, timeout=1)
+
+print(" Monitorando o Arduino...")
+
+# Abre (ou cria) o arquivo CSV para registrar os eventos
+with open("log_agulha.csv", "a", encoding="utf-8") as arquivo:
+
+    # Loop infinito para monitorar continuamente a porta serial
+    while True:
+        try:
+            # Lê uma linha enviada pelo Arduino e converte para string
+            linha = ser.readline().decode("utf-8").strip()
+
+            # Se a linha não estiver vazia, processa
+            if linha:
+                # Registra o horário atual com data e hora
+                tempo = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                # Se o Arduino enviou "AGULHA_REMOVIDA"
+                if linha == "AGULHA_REMOVIDA":
+                    registro = f"{tempo},REMOVIDA\n"
+                    print(" Agulha removida:", tempo)
+                    arquivo.write(registro)
+                    arquivo.flush()
+
+                # Se o Arduino enviou "AGULHA_RECOLOCADA"
+                elif linha == "AGULHA_RECOLOCADA":
+                    registro = f"{tempo},RECOLOCADA\n"
+                    print("Agulha recolocada:", tempo)
+                    arquivo.write(registro)
+                    arquivo.flush()
+
+        # Permite encerrar o programa pressionando CTRL + C
+        except KeyboardInterrupt:
+            print("\n Encerrado pelo usuário.")
+            break
+
+        # Captura qualquer outro erro e mostra na tela
+        except Exception as e:
+            print("Erro:", e)
